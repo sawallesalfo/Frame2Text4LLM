@@ -4,6 +4,19 @@
 
 ![Contributor User Journey](user%20journey.jpg)
 
+## Table of Contents
+
+- [1. Project Vision](#1-project-vision)
+- [2. What's In It For You](#2-whats-in-it-for-you)
+- [3. Pipeline Architecture](#3-pipeline-architecture)
+- [4. Prerequisites](#4-prerequisites)
+- [5. Contribution Workflow](#5-contribution-workflow---step-by-step)
+- [6. Dataset Format](#6-dataset-format)
+- [7. Video Registry](#7-video-registry-no-duplicates)
+- [8. Final Merge](#8-final-merge---the-big-dataset)
+- [9. Contributor Checklist](#9-contributor-checklist)
+- [10. Contact](#10-contact-and-coordination)
+
 ---
 
 ## 1. Project Vision
@@ -45,7 +58,27 @@ We are building a **massive collaborative dataset** for **Moore** - all dialects
 
 ---
 
-## 2. Pipeline Architecture
+## 2. What's In It For You
+
+No coffee, no gain. We're not going to pretend this is easy work. Processing videos, running OCR, aligning transcriptions - it takes time and effort. So here's the deal:
+
+**Every contributor who publishes a dataset will be a co-author on the final dataset publication.**
+
+That's right. Your name on the Hugging Face dataset card. Your name on any paper that comes out of this. You did the work, you get the credit. Simple.
+
+| What you do | What you get |
+|---|---|
+| Process videos and publish your dataset on HF | Co-author on the final merged dataset |
+| Your dataset is part of the final merge | Named contributor on any related publication |
+| Find bugs and open issues | Credited in the package changelog |
+
+No free riders. Only those who actually publish a dataset to the community get co-authorship. We can see your Hugging Face repo - either the data is there or it isn't.
+
+> *"No coffee, no gain. No dataset, no name."*
+
+---
+
+## 3. Pipeline Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -72,7 +105,7 @@ We are building a **massive collaborative dataset** for **Moore** - all dialects
 
 ---
 
-## 3. Prerequisites
+## 4. Prerequisites
 
 ### 3.1 Environment
 
@@ -123,7 +156,7 @@ The ASR model used is: **`sawadogosalif/WHISPER-LARGE`** on Hugging Face. The ac
 
 ---
 
-## 4. Contribution Workflow - Step by Step
+## 5. Contribution Workflow - Step by Step
 
 > Each contributor works on their own videos and publishes their dataset on **their own Hugging Face account**. At the end, we merge everything into one big dataset. Like a good zoom-koom: everyone brings their share.
 
@@ -244,7 +277,7 @@ Examples:
 
 ---
 
-## 5. Dataset Format
+## 6. Dataset Format
 
 ### 5.1 File structure per contributor
 
@@ -300,7 +333,7 @@ data/
 
 ---
 
-## 6. Video Registry (No Duplicates)
+## 7. Video Registry (No Duplicates)
 
 The file `registry/video_registry.csv` is the **central coordination point**. No registry, no clean dataset. It's like land with no cadastre: total mess.
 
@@ -325,7 +358,7 @@ IF not -> add it with status=in_progress
 
 ---
 
-## 7. Final Merge - The Big Dataset
+## 8. Final Merge - The Big Dataset
 
 Everyone produces and publishes their dataset individually on their Hugging Face account. At the end, we merge everything. Like a good to: everyone pounds their own millet, but we all eat together.
 
@@ -339,7 +372,7 @@ PUBLISH final merged dataset -> sawadogosalif/moore-speech-dataset
 
 ---
 
-## 8. Contributor Checklist
+## 9. Contributor Checklist
 
 ### Before you start
 - [ ] Python environment set up with all dependencies
@@ -368,7 +401,7 @@ PUBLISH final merged dataset -> sawadogosalif/moore-speech-dataset
 
 ---
 
-## 9. Contact and Coordination
+## 10. Contact and Coordination
 
 - **Repository**: https://github.com/sawadogosalif/Frame2Text4LLM
 - **Email**: frame2text4llm@gmail.com

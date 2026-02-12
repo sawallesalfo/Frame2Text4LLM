@@ -16,4 +16,4 @@ easyocr
 einops 
 timm
 pytubefix
-ffmpeg-python>=0.2.0 or #winget install ffmpeg
+# #winget install ffmpeg

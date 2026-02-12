@@ -24,13 +24,14 @@ class OCRManager:
         self.available_tools = list(OCR_TOOLS.keys())
         self.tool_instances: Dict[str, Any] = {}
 
-    def get_tool_instance(self, tool_name: str, api_key: Optional[str] = None) -> Any:
+    def get_tool_instance(self, tool_name: str, api_key: Optional[str] = None, model_name: Optional[str] = None) -> Any:
         """
         Get or create an instance of the requested OCR tool.
 
         Args:
             tool_name: Name of the OCR tool.
             api_key: API key for cloud-based OCR services.
+            model_name: Model name for VLM tools (e.g., "Florence-2-base", "InternVL2-1B").
 
         Returns:
             Instance of the OCR tool.
@@ -39,13 +40,22 @@ class OCRManager:
             raise ValueError(f"Unsupported OCR tool: {tool_name}. Available tools: {self.available_tools}")
 
         # Create a new instance if it doesn't exist or if an API key is explicitly provided
-        if tool_name not in self.tool_instances or api_key:
+        if tool_name not in self.tool_instances or api_key or model_name:
             tool_class = OCR_TOOLS[tool_name]
 
             if tool_name in ["openai", "mistral"]:
                 if not api_key:
                     raise ValueError(f"API key is required for {tool_name} OCR")
                 self.tool_instances[tool_name] = tool_class(api_key=api_key)
+            elif tool_name == "vlm":
+                # Map short names to full model names
+                model_mapping = {
+                    "Florence-2-base": "microsoft/Florence-2-base",
+                    "Florence-2-base-ft": "microsoft/Florence-2-base-ft", 
+                    "InternVL2-1B": "OpenGVLab/InternVL2-1B"
+                }
+                full_model_name = model_mapping.get(model_name, model_name) if model_name else "microsoft/Florence-2-base-ft"
+                self.tool_instances[tool_name] = tool_class(model_name=full_model_name)
             else:
                 self.tool_instances[tool_name] = tool_class()
 
@@ -58,21 +68,23 @@ class OCRManager:
         lang: str = "eng",
         api_key: Optional[str] = None,
         detect_subtitle_reggion: bool = True,
+        model_name: Optional[str] = None,
     ) -> str:
         """
         Process an image using the selected OCR tool.
 
         Args:
             image: NumPy array containing the image.
-            tool: OCR tool to use ('tesseract', 'paddleocr', 'openai', 'mistral').
+            tool: OCR tool to use ('tesseract', 'paddleocr', 'openai', 'mistral', 'vlm').
             lang: Language code (for tools that support it).
             api_key: API key for cloud-based OCR services.
             detect_subtitle_reggion:  Whether to detect subtitle regions in the image and crop it before ocr.
+            model_name: Model name for VLM tools (e.g., "Florence-2-base", "InternVL2-1B").
 
         Returns:
             Extracted text from the image.
         """
-        tool_instance = self.get_tool_instance(tool, api_key)
+        tool_instance = self.get_tool_instance(tool, api_key, model_name)
         if detect_subtitle_reggion:
             detector = SubtitleRegionDetector(self.video_reader)
             y1, y2, x1, x2  = detector.detect_region()

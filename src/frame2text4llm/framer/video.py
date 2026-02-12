@@ -9,6 +9,7 @@ import numpy as np
 from loguru import logger
 import cv2
 
+
 class VideoReader:
     def __init__(self, video_path: str, engine: str = 'opencv'):
         """
@@ -172,14 +173,16 @@ class VideoReader:
         finally:
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
-    
-    def extract_frames(self,  target_fps: int = None, max_frames: int = -1) -> List[VideoFrame]:
+
+    def extract_frames(self,  target_fps: int = None, max_frames: int = -1, filter_duplicates: bool = False, diff_thresh: int = 10) -> List[VideoFrame]:
         """
         Extract frames from the video.
         
         Args:
             target_fps: Target sampling rate (frames per second)
             max_frames: Maximum number of frames to extract (-1 = no limit)
+            filter_duplicates: Whether to filter duplicate frames
+            diff_thresh: Threshold for duplicate detection (higher = more strict)
             
         Returns:
             List of VideoFrame objects
@@ -190,6 +193,12 @@ class VideoReader:
             frames = self._extract_frames_ffmpeg(target_fps, max_frames)
         else:
             raise ValueError(f"Unsupported engine: {self.engine}")
+        
+        #if filter duplicates
+        if filter_duplicates:
+            #locally to avoid circular import
+            from ..ocr.utils.image_utils import _filter_duplicates
+            frames = _filter_duplicates(frames, diff_thresh)
         
         self.video.frames = frames
         return frames

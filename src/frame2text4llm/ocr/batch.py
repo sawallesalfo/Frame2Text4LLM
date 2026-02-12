@@ -3,8 +3,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from loguru import logger 
 
-
 from .manager import OCRManager
+from .utils.text_utils import _merge_segments
+
 
 class OCRBatchProcessor:
     """
@@ -38,6 +39,7 @@ class OCRBatchProcessor:
         tool: str, 
         lang: str, 
         api_key: Optional[str] = None,
+        model_name: Optional[str] = None,
         custom_processor: Optional[Callable] = None
     ) -> Dict[str, Any]:
         """
@@ -64,7 +66,8 @@ class OCRBatchProcessor:
                     image=frame.image, 
                     tool=tool, 
                     lang=lang, 
-                    api_key=api_key
+                    api_key=api_key,
+                    model_name=model_name
                 )
                 
             result = {
@@ -92,11 +95,14 @@ class OCRBatchProcessor:
         tool: Optional[str] = None,
         lang: Optional[str] = None,
         api_key: Optional[str] = None,
+        model_name: Optional[str] = None,
         n_cores: Optional[int] = None,
         preserve_order: bool = True,
         show_progress: bool = True,
         custom_processor: Optional[Callable] = None,
-        description: str = "🔠 OCR Processing"
+        description: str = "🔠 OCR Processing",
+        merge_segments: bool = False,
+        sim_thresh: float = 0.8
     ) -> List[Dict[str, Any]]:
         """
         Run OCR on a batch of video frames using parallel processing.
@@ -106,11 +112,14 @@ class OCRBatchProcessor:
             tool: OCR tool to use (defaults to instance default)
             lang: Language code (defaults to instance default)
             api_key: API key for tools like OpenAI or Mistral
+            model_name: Model name for VLM tools (e.g., "Florence-2-base", "InternVL2-1B")
             n_cores: Number of threads to use (defaults to instance default)
             preserve_order: Whether to preserve original frame order in results
             show_progress: Whether to display a progress bar
             custom_processor: Optional custom function to process images
             description: Description for the progress bar
+            merge_segments: Whether to merge similar consecutive segments
+            sim_thresh: Similarity threshold for merging (0.0-1.0)
             
         Returns:
             List of dicts with frame metadata and extracted text
@@ -138,6 +147,7 @@ class OCRBatchProcessor:
                     tool=tool,
                     lang=lang,
                     api_key=api_key,
+                    model_name=model_name,
                     custom_processor=custom_processor
                 )
                 if preserve_order:
@@ -166,8 +176,14 @@ class OCRBatchProcessor:
             results = [r[1] for r in results]
         
         logger.info(f"Completed OCR processing. Success rate: {sum(1 for r in results if r.get('success', False))}/{len(results)}")
+        
+        #if merge segments
+        if merge_segments:
+            results = _merge_segments(results, sim_thresh)
+        
         return results
     
+        
 
 def run_ocr_batch_threaded(
     frames: List[Any],

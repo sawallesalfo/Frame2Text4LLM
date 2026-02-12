@@ -1,8 +1,19 @@
 setuptools
 beartype
 loguru>=0.5.0
-pytesseract
 opencv-python
 matplotlib
 python-dotenv
 openpyxl
+datasets
+huggingface-hub
+soundfile
+numpy
+mistralai
+paddleocr==3.1.0  # API CHANGE SINCE VERSION 3.0.0
+torch # LOCALLY I NEED TO INSTALL TORCH NOT ON CALOB 
+easyocr
+einops 
+timm
+pytubefix
+# #winget install ffmpeg

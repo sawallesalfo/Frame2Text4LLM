@@ -146,85 +146,43 @@ moore_002,https://facebook.com/watch/?v=YYYYY,facebook,yes,first_last,pending,20
 
 ### Step 2: Download the video
 
-```python
-import subprocess
-
-video_url = "https://youtube.com/watch?v=XXXXX"
-output_path = "data/raw_videos/moore_001.mp4"
-
-# Download with yt-dlp
-subprocess.run([
-    "yt-dlp",
-    "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]",
-    "-o", output_path,
-    video_url
-])
+```
+DOWNLOAD video from URL using yt-dlp
+SAVE to data/raw_videos/moore_XXX.mp4
 ```
 
 ### Step 3: Extract French subtitles (OCR via frame2text4llm)
 
 This is where our package comes in. It extracts video frames, detects the subtitle area, and runs OCR to get the French text.
 
-```python
-from frame2text4llm.framer.video import VideoReader
-from frame2text4llm.ocr.manager import OCRManager
-from frame2text4llm.ocr.batch import OCRBatchProcessor
-from frame2text4llm.ocr.utils.group import group_and_clean_text
+```
+LOAD video using VideoReader
+EXTRACT frames at 1 frame per second
+RUN OCR on each frame (tool: tesseract or paddleocr, lang: fra)
+GROUP and CLEAN text by time window (e.g. 10 seconds)
 
-# 1. Load the video
-video_reader = VideoReader("data/raw_videos/moore_001.mp4", engine="opencv")
-video_reader.print_info()
-
-# 2. Extract frames (1 frame per second recommended)
-frames = video_reader.extract_frames(target_fps=1)
-
-# 3. Run OCR on frames to extract French subtitles
-ocr_manager = OCRManager(video_reader)
-processor = OCRBatchProcessor()
-
-results = processor.process_batch(
-    frames=frames,
-    tool="tesseract",       # or "paddleocr" for French
-    lang="fra",             # French
-    n_cores=4,
-    show_progress=True
-)
-
-# 4. Clean and group text by time window
-grouped_subtitles = group_and_clean_text(results, window_sec=10)
-
-# grouped_subtitles = [
-#     {"start_time": "00:00:00", "end_time": "00:00:10", "aggregated_text": "Bonjour a tous..."},
-#     {"start_time": "00:00:10", "end_time": "00:00:20", "aggregated_text": "Aujourd'hui nous..."},
-#     ...
-# ]
+OUTPUT -> list of {start_time, end_time, french_text}
 ```
 
 **Not working well?** That's normal, it's iterative. Open an issue on the repo with the problematic case. We improve the package together.
 
 ### Step 4: Extract and transcribe audio (ASR Whisper)
 
+**4a. Extract audio from video:**
+
+```
+EXTRACT audio from video using ffmpeg
+CONVERT to WAV, 16kHz, mono
+SAVE to data/audio/moore_XXX.wav
+```
+
+**4b. Load the ASR model:**
+
 ```python
 import torch
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-import librosa
-import subprocess
 import os
 
-# 1. Extract audio from the video
-video_path = "data/raw_videos/moore_001.mp4"
-audio_path = "data/audio/moore_001.wav"
-
-subprocess.run([
-    "ffmpeg", "-i", video_path,
-    "-vn",                    # no video
-    "-acodec", "pcm_s16le",  # WAV format
-    "-ar", "16000",           # 16kHz (required by Whisper)
-    "-ac", "1",               # mono
-    audio_path
-])
-
-# 2. Load the ASR model
 HF_TOKEN_ASR = os.getenv("HF_TOKEN_ASR")
 
 processor = WhisperProcessor.from_pretrained(
@@ -238,127 +196,44 @@ model = WhisperForConditionalGeneration.from_pretrained(
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = model.to(device)
+```
 
-# 3. Transcribe segments aligned with OCR subtitles
-def transcribe_segment(audio_path, start_sec, end_sec, processor, model, device):
-    """Transcribe an audio segment in Moore."""
-    audio, sr = librosa.load(audio_path, sr=16000, offset=start_sec, duration=end_sec - start_sec)
-    input_features = processor(audio, sampling_rate=16000, return_tensors="pt").input_features.to(device)
+**4c. Transcribe each segment:**
 
-    with torch.no_grad():
-        predicted_ids = model.generate(input_features)
-
-    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
-    return transcription
+```
+FOR each segment from Step 3:
+    LOAD audio chunk from start_time to end_time
+    RUN Whisper model on the chunk
+    GET Moore transcription
 ```
 
 ### Step 5: Align and create the dataset
 
-```python
-import json
+```
+FOR each segment:
+    PAIR the Moore transcription (from ASR) with the French subtitle (from OCR)
+    ADD metadata: video_id, start_time, end_time, duration, source_url, contributor
+    APPEND to dataset
 
-def parse_time_to_seconds(time_str):
-    """Convert 'HH:MM:SS' to seconds."""
-    parts = time_str.split(":")
-    h, m, s = int(parts[0]), int(parts[1]), int(parts[2])
-    return h * 3600 + m * 60 + s
-
-# Build the aligned dataset
-dataset_entries = []
-
-for segment in grouped_subtitles:
-    start_sec = parse_time_to_seconds(segment["start_time"])
-    end_sec = parse_time_to_seconds(segment["end_time"])
-    french_text = segment["aggregated_text"]
-
-    # Transcribe the audio segment in Moore
-    moore_transcription = transcribe_segment(
-        audio_path, start_sec, end_sec, processor, model, device
-    )
-
-    entry = {
-        "video_id": "moore_001",
-        "start_time": segment["start_time"],
-        "end_time": segment["end_time"],
-        "duration_sec": end_sec - start_sec,
-        "audio_file": f"audio_segments/moore_001_{start_sec}_{end_sec}.wav",
-        "transcription_moore": moore_transcription,
-        "translation_fr": french_text,
-        "source_url": "https://youtube.com/watch?v=XXXXX",
-        "contributor": "first_last"
-    }
-    dataset_entries.append(entry)
-
-# Save as JSONL (one entry per line)
-output_path = "data/datasets/moore_001.jsonl"
-with open(output_path, "w", encoding="utf-8") as f:
-    for entry in dataset_entries:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-
-print(f"Dataset generated: {len(dataset_entries)} entries -> {output_path}")
+SAVE dataset as JSONL -> data/datasets/moore_XXX.jsonl
 ```
 
 ### Step 6: Split and save audio segments
 
-```python
-def extract_audio_segments(audio_path, dataset_entries, output_dir):
-    """Split audio into individual segments."""
-    os.makedirs(output_dir, exist_ok=True)
-
-    for entry in dataset_entries:
-        start_sec = parse_time_to_seconds(entry["start_time"])
-        end_sec = parse_time_to_seconds(entry["end_time"])
-        segment_path = os.path.join(output_dir, os.path.basename(entry["audio_file"]))
-
-        subprocess.run([
-            "ffmpeg", "-i", audio_path,
-            "-ss", str(start_sec),
-            "-to", str(end_sec),
-            "-acodec", "pcm_s16le",
-            "-ar", "16000",
-            "-ac", "1",
-            "-y",
-            segment_path
-        ], capture_output=True)
-
-    print(f"Audio segments extracted: {len(dataset_entries)} files -> {output_dir}")
-
-extract_audio_segments(
-    audio_path="data/audio/moore_001.wav",
-    dataset_entries=dataset_entries,
-    output_dir="data/audio_segments/"
-)
+```
+FOR each segment in the dataset:
+    CUT audio from start_time to end_time using ffmpeg
+    SAVE as WAV (16kHz, mono) -> data/audio_segments/moore_XXX_start_end.wav
 ```
 
 ### Step 7: Publish your dataset on YOUR Hugging Face account
 
 Each contributor publishes their dataset on **their own** Hugging Face account. It's your work, your name is on it. Be proud of it.
 
-```python
-from datasets import Dataset, Audio
-import json
-import os
-
-HF_TOKEN = os.getenv("HF_TOKEN")  # your personal token
-
-# 1. Load your JSONL
-entries = []
-with open("data/datasets/moore_001.jsonl", "r", encoding="utf-8") as f:
-    for line in f:
-        entries.append(json.loads(line))
-
-# 2. Create Hugging Face dataset
-dataset = Dataset.from_list(entries)
-dataset = dataset.cast_column("audio_file", Audio(sampling_rate=16000))
-
-# 3. Publish on YOUR account
-# Replace "your_hf_username" with your actual Hugging Face username
-dataset.push_to_hub(
-    "your_hf_username/moore-dataset-contribution",
-    token=HF_TOKEN
-)
-
-print("Dataset published! You're making Moore AI happen.")
+```
+LOAD your JSONL file
+CREATE a Hugging Face Dataset (with Audio column)
+PUSH to your account: {your_username}/moore-dataset-{your_name}
 ```
 
 **Naming convention on Hugging Face:** `{your_username}/moore-dataset-{your_name}`
@@ -441,22 +316,11 @@ The file `registry/video_registry.csv` is the **central coordination point**. No
 
 ### Check for duplicates:
 
-```python
-import pandas as pd
-
-registry = pd.read_csv("registry/video_registry.csv")
-
-# Check if a URL already exists
-url = "https://youtube.com/watch?v=XXXXX"
-if url in registry["url"].values:
-    print("WARNING: This video is already taken! Find another one.")
-else:
-    print("OK: Video available, go for it.")
-
-# See stats
-print(f"Total videos: {len(registry)}")
-print(f"In progress: {(registry['status'] == 'in_progress').sum()}")
-print(f"Done: {(registry['status'] == 'done').sum()}")
+```
+LOAD registry/video_registry.csv
+CHECK if your video URL already exists
+IF exists -> find another video
+IF not -> add it with status=in_progress
 ```
 
 ---
@@ -465,33 +329,12 @@ print(f"Done: {(registry['status'] == 'done').sum()}")
 
 Everyone produces and publishes their dataset individually on their Hugging Face account. At the end, we merge everything. Like a good to: everyone pounds their own millet, but we all eat together.
 
-```python
-from datasets import load_dataset, concatenate_datasets
+```
+FOR each contributor dataset on Hugging Face:
+    LOAD dataset from {username}/moore-dataset-{name}
 
-# List of individual datasets published by contributors
-contributor_datasets = [
-    "salif_sawadogo/moore-dataset-salif",
-    "alban_ny/moore-dataset-alban",
-    "contributor3/moore-dataset-contributor3",
-    # ... add all contributors
-]
-
-# 1. Load and merge all datasets
-all_datasets = []
-for repo_id in contributor_datasets:
-    ds = load_dataset(repo_id, split="train")
-    all_datasets.append(ds)
-    print(f"  {repo_id}: {len(ds)} entries")
-
-merged = concatenate_datasets(all_datasets)
-print(f"\nMerged dataset: {len(merged)} total entries")
-print(f"Contributors: {len(contributor_datasets)}")
-
-# 2. Publish the final dataset
-merged.push_to_hub(
-    "sawadogosalif/moore-speech-dataset",
-    token=HF_TOKEN
-)
+CONCATENATE all datasets into one
+PUBLISH final merged dataset -> sawadogosalif/moore-speech-dataset
 ```
 
 ---

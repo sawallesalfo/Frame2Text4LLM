@@ -78,7 +78,7 @@ We are building a **massive collaborative dataset** for **Moore** - all dialects
 
 - **Python** >= 3.8
 - **FFmpeg** installed and available in PATH
-- **Tesseract OCR** installed (for subtitle extraction)
+- **PaddleOCR** or **EasyOCR** (for subtitle extraction)
 - **GPU recommended** (for Whisper ASR) - if you've run out of GPU quota, don't panic: we have a **shared Google Colab account** for the project. Ask the maintainers for access
 - **A Hugging Face account** with your own username (you'll publish your dataset there)
 - **OpenAI API**: A shared account is available for OCR via the OpenAI engine. Use it **sparingly** (it costs money, and we're not OpenAI)
@@ -158,7 +158,7 @@ This is where our package comes in. It extracts video frames, detects the subtit
 ```
 LOAD video using VideoReader
 EXTRACT frames at 1 frame per second
-RUN OCR on each frame (tool: tesseract or paddleocr, lang: fra)
+RUN OCR on each frame (tool: paddleocr, easyocr, openai, mistral, or vlm)
 GROUP and CLEAN text by time window (e.g. 10 seconds)
 
 OUTPUT -> list of {start_time, end_time, french_text}
@@ -344,7 +344,7 @@ PUBLISH final merged dataset -> sawadogosalif/moore-speech-dataset
 ### Before you start
 - [ ] Python environment set up with all dependencies
 - [ ] Hugging Face tokens (ASR + personal) configured in `.env`
-- [ ] FFmpeg and Tesseract installed
+- [ ] FFmpeg installed
 - [ ] Repo cloned and branch up to date
 - [ ] Hugging Face account created with your username
 

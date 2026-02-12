@@ -14,7 +14,7 @@ We are building a **massive collaborative dataset** for **Moore** - all dialects
 
 - **ASR (Automatic Speech Recognition)**: So machines can finally understand Moore
 - **TTS (Text-to-Speech)**: So machines can speak Moore (without a weird accent)
-- **Fine-tuning reasoning models**: Moore <-> French pairs for knowledge transfer
+- **Fine-tuning reasoning models**: Think about it - we get Moore audio, its transcription, AND the French translation as context. Feed that to an LLM and you've got a reasoning task: understand Moore, reason in French, respond in Moore. That's exactly the kind of data reasoning models are hungry for
 - **Machine translation**: Moore <-> French
 
 **The idea is simple (the work, not so much):** The internet is full of videos spoken in Moore with burned-in French subtitles. We will:

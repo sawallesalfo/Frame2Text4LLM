@@ -159,19 +159,32 @@ class VLMOCR:
         response = self.model.chat(self.tokenizer, pixel_values, question, generation_config)
         return response
     
-    def _infer_chat(self, image: np.ndarray) -> str:
-        """An image-text-to-text model through its chat template, on the image doubled (BGR, as
-        OpenCV reads it). An answer of "-" means no subtitle."""
-        big = cv2.cvtColor(cv2.resize(image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2RGB)
-        messages = [{"role": "user", "content": [{"type": "image", "image": Image.fromarray(big)},
-                                                 {"type": "text", "text": self.prompt}]}]
+    def _infer_chat(self, images: list) -> list:
+        """An image-text-to-text model through its chat template, on the images doubled (BGR, as
+        OpenCV reads them), read in one batch padded on the left. An answer of "-" means no subtitle."""
+        messages = [
+            [{"role": "user", "content": [
+                {"type": "image", "image": Image.fromarray(cv2.cvtColor(
+                    cv2.resize(image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2RGB))},
+                {"type": "text", "text": self.prompt}]}]
+            for image in images
+        ]
+        self.processor.tokenizer.padding_side = "left"
         inputs = self.processor.apply_chat_template(
-            messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt"
+            messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt", padding=True
         ).to(self.model.device)
         with torch.no_grad():
             ids = self.model.generate(**inputs, max_new_tokens=128, do_sample=False)
-        text = self.processor.decode(ids[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
-        return "" if text == "-" else text
+        texts = self.processor.batch_decode(ids[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+        return ["" if t.strip() == "-" else t.strip() for t in texts]
+
+    def process_images(self, images: list, lang: str = "en", batch_size: int = 16) -> list:
+        """process_image on many images: an image-text-to-text model reads `batch_size` at a time,
+        which keeps the GPU busy; Florence-2 and InternVL2 still read one by one."""
+        self._initialize_model()
+        if self.model_name in ['microsoft/Florence-2-base-ft', 'microsoft/Florence-2-base', 'OpenGVLab/InternVL2-1B']:
+            return [self.process_image(image, lang) for image in images]
+        return [t for i in range(0, len(images), batch_size) for t in self._infer_chat(images[i:i + batch_size])]
 
     def process_image(self, image: np.ndarray, lang: str = "en") -> str:
         """
@@ -196,7 +209,7 @@ class VLMOCR:
             elif self.model_name == 'OpenGVLab/InternVL2-1B':
                 result = self._infer_internvl2(frame_bytes)
             else:
-                result = self._infer_chat(image)
+                result = self._infer_chat([image])[0]
             
             return str(result) if result else ""
             

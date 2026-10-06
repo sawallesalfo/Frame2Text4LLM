@@ -15,5 +15,5 @@ torch # LOCALLY I NEED TO INSTALL TORCH NOT ON CALOB
 easyocr
 einops 
 timm
-pytubefix
+yt-dlp
 # #winget install ffmpeg

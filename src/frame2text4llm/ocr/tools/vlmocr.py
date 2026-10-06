@@ -1,10 +1,14 @@
 import io
 import numpy as np
 from loguru import logger
-from PIL import Image
-import torch
-from torchvision.transforms.functional import InterpolationMode
-import torchvision.transforms as T
+
+try:  # the vlm extra, so that importing the other OCR tools does not need torch
+    from PIL import Image
+    import torch
+    from torchvision.transforms.functional import InterpolationMode
+    import torchvision.transforms as T
+except ImportError:
+    torch = None
 
 
 class VLMOCR:
@@ -19,6 +23,8 @@ class VLMOCR:
         Args:
             model_name: Model to use ('microsoft/Florence-2-base-ft', 'microsoft/Florence-2-base', 'OpenGVLab/InternVL2-1B')
         """
+        if torch is None:
+            raise ImportError("VLMOCR needs the vlm extra: pip install 'frame2text4llm[vlm]'")
         self.model_name = model_name
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.torch_dtype = torch.float16 if self.device.startswith("cuda") else torch.float32

@@ -1,4 +1,5 @@
 import io
+import cv2
 import numpy as np
 from loguru import logger
 
@@ -11,21 +12,29 @@ except ImportError:
     torch = None
 
 
+PROMPT = ("Copy exactly the subtitle burned into this image, on one line, adding nothing. "
+          "If there is no subtitle, answer only: -")
+
+
 class VLMOCR:
     """
     VLM-based OCR implementation (using lightweight models)
     """
     
-    def __init__(self, model_name: str = 'OpenGVLab/InternVL2-1B'):
+    def __init__(self, model_name: str = 'Qwen/Qwen3-VL-2B-Instruct', prompt: str = PROMPT):
         """
         Initialize VLM OCR with specified model.
         
         Args:
-            model_name: Model to use ('microsoft/Florence-2-base-ft', 'microsoft/Florence-2-base', 'OpenGVLab/InternVL2-1B')
+            model_name: Florence-2 ('microsoft/Florence-2-base-ft', 'microsoft/Florence-2-base'),
+                'OpenGVLab/InternVL2-1B', or any image-text-to-text model of transformers, such as
+                'Qwen/Qwen3-VL-2B-Instruct', which reads subtitles best (docs: Choosing an OCR engine).
+            prompt: What an image-text-to-text model is asked; it answers "-" for no subtitle.
         """
         if torch is None:
             raise ImportError("VLMOCR needs the vlm extra: pip install 'frame2text4llm[vlm]'")
         self.model_name = model_name
+        self.prompt = prompt
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         self.torch_dtype = torch.float16 if self.device.startswith("cuda") else torch.float32
         self.model = None
@@ -74,8 +83,15 @@ class VLMOCR:
                     self.imagenet_mean = (0.485, 0.456, 0.406)
                     self.imagenet_std = (0.229, 0.224, 0.225)
                     
-                else:
-                    raise ValueError(f"Unsupported model: {self.model_name}")
+                else:  # any image-text-to-text model of transformers, such as Qwen3-VL
+                    from transformers import AutoModelForImageTextToText
+
+                    # bfloat16 where the GPU has it (compute capability 8 and up), float32 elsewhere, as measured on a T4
+                    bf16 = self.device.startswith("cuda") and torch.cuda.get_device_capability()[0] >= 8
+                    self.processor = AutoProcessor.from_pretrained(self.model_name)
+                    self.model = AutoModelForImageTextToText.from_pretrained(
+                        self.model_name, dtype=torch.bfloat16 if bf16 else torch.float32, device_map=self.device
+                    ).eval()
                     
                 logger.info("VLM model initialized")
                 
@@ -143,6 +159,20 @@ class VLMOCR:
         response = self.model.chat(self.tokenizer, pixel_values, question, generation_config)
         return response
     
+    def _infer_chat(self, image: np.ndarray) -> str:
+        """An image-text-to-text model through its chat template, on the image doubled (BGR, as
+        OpenCV reads it). An answer of "-" means no subtitle."""
+        big = cv2.cvtColor(cv2.resize(image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2RGB)
+        messages = [{"role": "user", "content": [{"type": "image", "image": Image.fromarray(big)},
+                                                 {"type": "text", "text": self.prompt}]}]
+        inputs = self.processor.apply_chat_template(
+            messages, tokenize=True, add_generation_prompt=True, return_dict=True, return_tensors="pt"
+        ).to(self.model.device)
+        with torch.no_grad():
+            ids = self.model.generate(**inputs, max_new_tokens=128, do_sample=False)
+        text = self.processor.decode(ids[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+        return "" if text == "-" else text
+
     def process_image(self, image: np.ndarray, lang: str = "en") -> str:
         """
         Extract text from image using VLM models.
@@ -166,7 +196,7 @@ class VLMOCR:
             elif self.model_name == 'OpenGVLab/InternVL2-1B':
                 result = self._infer_internvl2(frame_bytes)
             else:
-                raise ValueError(f"Unsupported model: {self.model_name}")
+                result = self._infer_chat(image)
             
             return str(result) if result else ""
             

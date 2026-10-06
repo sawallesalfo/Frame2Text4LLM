@@ -1,0 +1,70 @@
+[project]
+name = "frame2text4llm"
+dynamic = ["version"]
+description = "Read the subtitles burned into a video with OCR, and cut the audio under each one, to build speech and text datasets."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Alban NYANTUDRE" },
+    { name = "Salif SAWADOGO" },
+]
+requires-python = ">=3.10"
+keywords = ["ocr", "subtitles", "video", "speech", "dataset"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "beartype",
+    "datasets",
+    "huggingface-hub",
+    "loguru>=0.5.0",
+    "matplotlib",
+    "mistralai<2",  # later versions no longer export Mistral from the package root
+    "numpy",
+    "opencv-python",
+    "pandas",
+    "pydub",
+    "pytubefix",
+    "scipy",
+    "soundfile",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+easyocr = ["easyocr"]
+paddle = ["paddleocr>=3.1,<4", "paddlepaddle>=3"]  # the 3.x API: PaddleOCR.predict
+vlm = ["torch", "torchvision", "transformers", "pillow", "einops", "timm"]
+openai = ["openai"]
+all = ["frame2text4llm[easyocr,paddle,vlm,openai]"]
+
+[project.urls]
+Homepage = "https://github.com/sawallesalfo/Frame2Text4LLM"
+Issues = "https://github.com/sawallesalfo/Frame2Text4LLM/issues"
+Changelog = "https://github.com/sawallesalfo/Frame2Text4LLM/blob/main/HISTORY.md"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/frame2text4llm/package_metadata.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/frame2text4llm"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/frame2text4llm", "tests", "README.md", "HISTORY.md", "LICENSE"]
+
+[dependency-groups]
+dev = ["pytest>=7.4.0"]
+
+[tool.uv]
+exclude-newer = "1 week"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"

@@ -6,5 +6,5 @@
 **/*parquet
 build/
 .eggs/
-.github
+dist/
 notebooks/datasets/

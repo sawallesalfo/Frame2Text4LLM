@@ -4,6 +4,8 @@
 [![Tests](https://github.com/sawallesalfo/Frame2Text4LLM/actions/workflows/tests.yml/badge.svg)](https://github.com/sawallesalfo/Frame2Text4LLM/actions/workflows/tests.yml)
 [![Docs](https://img.shields.io/badge/docs-github%20pages-orange)](https://sawallesalfo.github.io/Frame2Text4LLM/)
 
+**By Alban Nyantudre and Salif Sawadogo**, for [BurkimbIA](https://huggingface.co/burkimbia).
+
 Read the subtitles burned into a video with OCR, find when each one starts and ends, and cut the
 audio underneath. What comes out is pairs of speech and text, for speech recognition or speech
 translation datasets in languages that have few of them.
@@ -64,4 +66,9 @@ uv run --only-group docs mkdocs serve
 To release, raise `__version__` in `src/frame2text4llm/package_metadata.py`, add the version to
 `HISTORY.md`, merge, and run the *Publish to PyPI* workflow.
 
-MIT licence. By Alban Nyantudre and Salif Sawadogo, for [BurkimbIA](https://huggingface.co/burkimbia).
+## Authors
+
+- **Alban Nyantudre** ([GitHub](https://github.com/anyantudre))
+- **Salif Sawadogo** ([GitHub](https://github.com/sawallesalfo))
+
+Contact: frame2text4llm@gmail.com. MIT licence.

@@ -9,6 +9,9 @@ authors = [
     { name = "Alban NYANTUDRE" },
     { name = "Salif SAWADOGO" },
 ]
+maintainers = [
+    { name = "Alban NYANTUDRE, Salif SAWADOGO", email = "frame2text4llm@gmail.com" },
+]
 requires-python = ">=3.10"
 keywords = ["ocr", "subtitles", "video", "speech", "dataset"]
 classifiers = [

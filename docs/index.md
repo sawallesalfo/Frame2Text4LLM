@@ -1,5 +1,7 @@
 # Frame2Text4LLM
 
+**By Alban Nyantudre and Salif Sawadogo**, for [BurkimbIA](https://huggingface.co/burkimbia).
+
 Many videos carry their translation burned into the picture: a series in Mooré with French
 subtitles, a sermon in Dioula subtitled in English. Frame2Text4LLM reads those subtitles with OCR,
 finds when each one starts and ends, and cuts the audio underneath. What comes out is a set of

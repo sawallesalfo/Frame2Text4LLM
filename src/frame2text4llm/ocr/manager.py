@@ -4,7 +4,7 @@ OCR Manager implementation for Frame2Tex4LLM.
 
 import os
 import numpy as np
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from frame2text4llm.framer.subtitle import SubtitleRegionDetector
 from frame2text4llm.framer.video import VideoReader
 
@@ -18,9 +18,14 @@ class OCRManager:
     Supports multiple OCR engines: Tesseract, PaddleOCR, OpenAI, and Mistral.
     """
 
-    def __init__(self, video_reader: VideoReader):
-        """Initialize OCR Manager with available tools."""
+    def __init__(self, video_reader: VideoReader, region: Optional[Tuple[int, int, int, int]] = None):
+        """Initialize OCR Manager with available tools.
+
+        region: (y1, y2, x1, x2) of the subtitles. Left out, it is detected on the first frame
+        processed and kept for the whole video: detecting it reads three frames from the file.
+        """
         self.video_reader = video_reader
+        self.region = region
         self.available_tools = list(OCR_TOOLS.keys())
         self.tool_instances: Dict[str, Any] = {}
 
@@ -86,8 +91,9 @@ class OCRManager:
         """
         tool_instance = self.get_tool_instance(tool, api_key, model_name)
         if detect_subtitle_reggion:
-            detector = SubtitleRegionDetector(self.video_reader)
-            y1, y2, x1, x2  = detector.detect_region()
+            if self.region is None:
+                self.region = SubtitleRegionDetector(self.video_reader).detect_region()
+            y1, y2, x1, x2 = self.region
             image = image[y1:y2, x1:x2]
 
         if tool in ["openai", "mistral"]:

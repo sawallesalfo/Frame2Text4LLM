@@ -44,8 +44,18 @@ class OCRManager:
         if tool_name not in self.available_tools:
             raise ValueError(f"Unsupported OCR tool: {tool_name}. Available tools: {self.available_tools}")
 
-        # Create a new instance if it doesn't exist or if an API key is explicitly provided
-        if tool_name not in self.tool_instances or api_key or model_name:
+        # Map short names to full model names
+        model_mapping = {
+            "Florence-2-base": "microsoft/Florence-2-base",
+            "Florence-2-base-ft": "microsoft/Florence-2-base-ft",
+            "InternVL2-1B": "OpenGVLab/InternVL2-1B",
+        }
+        full_model_name = model_mapping.get(model_name, model_name) if model_name else None
+
+        # A new instance if there is none, if an API key is given, or for another model: loading a
+        # model for every image would be slow
+        cached = self.tool_instances.get(tool_name)
+        if cached is None or api_key or (full_model_name and getattr(cached, "model_name", None) != full_model_name):
             tool_class = OCR_TOOLS[tool_name]
 
             if tool_name in ["openai", "mistral"]:
@@ -53,14 +63,7 @@ class OCRManager:
                     raise ValueError(f"API key is required for {tool_name} OCR")
                 self.tool_instances[tool_name] = tool_class(api_key=api_key)
             elif tool_name == "vlm":
-                # Map short names to full model names
-                model_mapping = {
-                    "Florence-2-base": "microsoft/Florence-2-base",
-                    "Florence-2-base-ft": "microsoft/Florence-2-base-ft", 
-                    "InternVL2-1B": "OpenGVLab/InternVL2-1B"
-                }
-                full_model_name = model_mapping.get(model_name, model_name) if model_name else "microsoft/Florence-2-base-ft"
-                self.tool_instances[tool_name] = tool_class(model_name=full_model_name)
+                self.tool_instances[tool_name] = tool_class(model_name=full_model_name or "Qwen/Qwen3-VL-2B-Instruct")
             else:
                 self.tool_instances[tool_name] = tool_class()
 

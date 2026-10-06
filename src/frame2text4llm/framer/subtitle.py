@@ -55,8 +55,9 @@ class SubtitleRegionDetector:
         
         y1 = int(height * 0.7)  # Start at 70% from the top
         y2 = height            # End at the bottom
-        x1 = int(width * 0.05)  # Start at 5% from the left
-        x2 = int(width * 0.95)  # End at 95% from the left
+        # Full width: a 5 % margin cut the first and last letters of wide subtitles
+        x1 = 0
+        x2 = width
         
         region = (y1, y2, x1, x2)
         logger.info(f"Detected subtitle region: y={y1}:{y2}, x={x1}:{x2}")

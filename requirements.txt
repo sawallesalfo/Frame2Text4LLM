@@ -9,7 +9,9 @@ datasets
 huggingface-hub
 soundfile
 numpy
-mistralai
+scipy
+pandas
+mistralai<2  # 3.0 no longer exports Mistral from the package root
 paddleocr==3.1.0  # API CHANGE SINCE VERSION 3.0.0
 torch # LOCALLY I NEED TO INSTALL TORCH NOT ON CALOB 
 easyocr

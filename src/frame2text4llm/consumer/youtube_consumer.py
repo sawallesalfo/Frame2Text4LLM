@@ -3,16 +3,17 @@ import subprocess
 from loguru import logger
 from pytubefix import Playlist, YouTube
 
-from frame2text4llm.utils.sanitize_filename import sanitize_filename
-
 
 class YoutubeConsumer:
     """
     Class to consume playlists and videos from YouTube.
     """
     
-    def __init__(self, output_dir="datasets/youtube/raw"):
+    def __init__(self, output_dir="datasets/youtube/raw", client="MWEB"):
         self.output_dir = output_dir
+        # pytubefix's default client gets no stream with sound in it (checked 6 Oct 2026, pytubefix
+        # 11.2.0); MWEB, ANDROID and TV_SIMPLY still get the 360p one. Change it here when YouTube moves again.
+        self.client = client
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
     
@@ -30,15 +31,16 @@ class YoutubeConsumer:
             if not os.path.exists(playlist_folder):
                 os.makedirs(playlist_folder)
             
-            playlist = Playlist(playlist_url)
+            playlist = Playlist(playlist_url, client=self.client)
             logger.info(f"Consumption of playlist: {playlist.title} started")
             
             for video in playlist.videos:
                 try:
                     logger.info(f"Processing video: {video.title}")
                     
-                    sanitized_title = sanitize_filename(video.title)
-                    file_path = os.path.join(playlist_folder, f"{sanitized_title}.mp4")
+                    # Named by video id, not title: two uploads with one title no longer overwrite each other.
+                    file_name = f"youtube_{video.video_id}.mp4"
+                    file_path = os.path.join(playlist_folder, file_name)
                     
                     if os.path.exists(file_path):
                         logger.info(f"File already exists: {file_path}. Download skipped.")
@@ -55,7 +57,7 @@ class YoutubeConsumer:
                         logger.warning(f"No suitable video stream found for: {video.title}")
                         continue
                     
-                    video_stream.download(output_path=playlist_folder, filename=f"{sanitized_title}.mp4")
+                    video_stream.download(output_path=playlist_folder, filename=file_name)
                     logger.info(f"Downloaded: {file_path}")
                     
                 except Exception as e:
@@ -77,12 +79,10 @@ class YoutubeConsumer:
         try:
             logger.info(f"Consumption of video: {video_url} started")
             
-            yt = YouTube(video_url)
+            yt = YouTube(video_url, client=self.client)
             
-            original_title = yt.title
-            sanitized_title = sanitize_filename(original_title)
-            
-            downloaded_file = os.path.join(output_dir, sanitized_title + ".mp4")
+            file_name = f"youtube_{yt.video_id}.mp4"
+            downloaded_file = os.path.join(output_dir, file_name)
             
             if os.path.exists(downloaded_file):
                 logger.info(f"File already exists: {downloaded_file}. Download skipped.")
@@ -99,7 +99,7 @@ class YoutubeConsumer:
                 logger.warning(f"No suitable video stream found for: {video_url}")
                 return None
             
-            downloaded_file = video_stream.download(output_path=output_dir, filename=sanitized_title + ".mp4")
+            video_stream.download(output_path=output_dir, filename=file_name)
             
             logger.info(f"Video file downloaded: {downloaded_file}")
             return downloaded_file

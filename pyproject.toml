@@ -61,6 +61,7 @@ include = ["src/frame2text4llm", "tests", "README.md", "HISTORY.md", "LICENSE"]
 
 [dependency-groups]
 dev = ["pytest>=7.4.0"]
+docs = ["mkdocs<2", "mkdocs-material", "mkdocstrings[python]"]  # MkDocs 2 drops plugins
 
 [tool.uv]
 exclude-newer = "1 week"

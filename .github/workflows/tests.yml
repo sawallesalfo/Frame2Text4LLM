@@ -1,0 +1,17 @@
+name: Tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get install -y ffmpeg
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run pytest
+      - run: uv build
+      - run: uvx twine check dist/*

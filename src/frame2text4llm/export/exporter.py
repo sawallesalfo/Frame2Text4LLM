@@ -67,8 +67,9 @@ class SRTExporter(BaseExporter):
             return "00:00:00,000"
         
         minutes, seconds, milliseconds = parts
-        # Format as HH:MM:SS,mmm
-        return f"00:{minutes}:{seconds},{milliseconds}"
+        # Format as HH:MM:SS,mmm: past an hour, the minutes go over 59
+        hours, minutes = divmod(int(minutes), 60)
+        return f"{hours:02d}:{minutes:02d}:{int(seconds):02d},{milliseconds}"
     
     def export(self, data: List[Dict[str, Any]], output_path: str) -> None:
         """
@@ -90,10 +91,13 @@ class SRTExporter(BaseExporter):
                     if not text:
                         continue
                     
-                    start_time = self._format_time(entry.get('time_formatted', ''))
+                    start_time = self._format_time(entry.get('start_time') or entry.get('time_formatted', ''))
                     
-                    # Get end time from next entry or use start time
-                    end_time = self._format_time(data[i + 1].get('time_formatted', '')) if i < len(data) - 1 else start_time
+                    # A merged segment knows its end; a single frame ends where the next one starts
+                    if entry.get('end_time'):
+                        end_time = self._format_time(entry['end_time'])
+                    else:
+                        end_time = self._format_time(data[i + 1].get('time_formatted', '')) if i < len(data) - 1 else start_time
                     
                     # Write SRT entry
                     f.write(f"{subtitle_number}\n")

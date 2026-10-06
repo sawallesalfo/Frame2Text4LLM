@@ -1,0 +1,68 @@
+site_name: Frame2Text4LLM
+site_description: Read the subtitles burned into a video, and cut the audio under each one.
+site_url: https://sawallesalfo.github.io/Frame2Text4LLM/
+repo_url: https://github.com/sawallesalfo/Frame2Text4LLM
+repo_name: sawallesalfo/Frame2Text4LLM
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  palette:
+    - scheme: default
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            show_root_heading: true
+            members_order: source
+            docstring_style: google
+            docstring_options:
+              warn_unknown_params: false
+              warn_missing_types: false
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Guide:
+      - How it works: guide/pipeline.md
+      - Choosing an OCR engine: guide/engines.md
+  - Examples:
+      - A YouTube video to a speech dataset: examples/youtube-dataset.md
+  - API reference: reference.md
+  - Changelog: changelog.md

@@ -28,9 +28,10 @@ class AudioGenerator:
             end = self._parse_time(seg.get('end_time'))
             duration = max(0.1, end - start) if end > start else 3.0
             out_path = self.tmp_audio_dir / f"segment_{idx:04d}.wav"
+            # -ss before -i seeks in the file instead of decoding everything before the segment
             cmd = [
-                "ffmpeg", "-y", "-i", str(self.video_path),
-                "-ss", f"{start:.3f}", "-t", f"{duration:.3f}",
+                "ffmpeg", "-y", "-ss", f"{start:.3f}", "-i", str(self.video_path),
+                "-t", f"{duration:.3f}",
                 "-ar", str(sample_rate), "-ac", "1", "-vn", str(out_path),
                 "-loglevel", "error"
             ]
@@ -50,6 +51,10 @@ class AudioGenerator:
         if len(parts) == 2:
             minutes, rest = parts
             seconds, ms = rest.split(".") if "." in rest else (rest, "0")
+            return int(minutes) * 60 + int(seconds) + int(ms) / 1000
+        elif len(parts) == 3 and "." not in parts[2] and len(parts[2]) == 3:
+            # MM:SS:mmm, the frames' own time_formatted
+            minutes, seconds, ms = parts
             return int(minutes) * 60 + int(seconds) + int(ms) / 1000
         elif len(parts) == 3:
             hours, minutes, rest = parts

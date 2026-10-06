@@ -27,6 +27,25 @@ def test_a_segment_ends_when_its_subtitle_leaves_the_screen():
     ]
 
 
+def test_one_subtitle_read_differently_stays_one_segment():
+    """A line skipped, accents lost, one frame read as empty: still one subtitle on screen 5 s."""
+    segments = _merge_segments(frames([
+        "",
+        "Deuxièmement, le portail de ma cour",
+        "Deuxièmement, le portail de ma cour a été confectionné par ma femme",
+        "",
+        "Deuxiemement le portail de ma cour a ete confectionne",
+        "Si vous nous aidez, cela nous fera un grand bien.",
+        "",
+        "",
+    ]))
+    assert [(s["start_time"], s["end_time"], s["best_time"]) for s in segments] == [
+        ("00:01:000", "00:05:000", "00:02:000"),
+        ("00:05:000", "00:06:000", "00:05:000"),
+    ]
+    assert segments[0]["text"].endswith("par ma femme")
+
+
 def test_times_are_read_back_in_seconds():
     parse = AudioGenerator.__new__(AudioGenerator)._parse_time
     assert parse(VideoFrame(np.zeros(1), 83.5, 0).time_formatted) == 83.5

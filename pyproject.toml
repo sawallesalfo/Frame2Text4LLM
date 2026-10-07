@@ -40,7 +40,7 @@ dependencies = [
 [project.optional-dependencies]
 easyocr = ["easyocr"]
 paddle = ["paddleocr>=3.1,<4", "paddlepaddle>=3"]  # the 3.x API: PaddleOCR.predict
-vlm = ["torch", "torchvision", "transformers>=4.57", "pillow", "einops", "timm"]
+vlm = ["torch", "torchvision", "transformers>=4.57", "accelerate", "pillow", "einops", "timm"]
 openai = ["openai"]
 all = ["frame2text4llm[easyocr,paddle,vlm,openai]"]
 
